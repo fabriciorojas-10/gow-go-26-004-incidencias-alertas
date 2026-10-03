@@ -31,9 +31,35 @@ import org.maplibre.android.maps.Style
 
 private const val AREQUIPA_LAT = -16.4090
 private const val AREQUIPA_LNG = -71.5375
-private const val DEFAULT_ZOOM = 12.5
+private const val DEFAULT_ZOOM = 14.0
 private const val ALERT_ZOOM = 16.5
-private const val MAP_STYLE_URL = "https://demotiles.maplibre.org/style.json"
+
+private val OSM_STYLE_JSON = """
+{
+  "version": 8,
+  "sources": {
+    "osm-tiles": {
+      "type": "raster",
+      "tiles": [
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256,
+      "attribution": "© OpenStreetMap contributors"
+    }
+  },
+  "layers": [
+    {
+      "id": "osm-layer",
+      "type": "raster",
+      "source": "osm-tiles",
+      "minzoom": 0,
+      "maxzoom": 19
+    }
+  ]
+}
+""".trimIndent()
 
 @Suppress("DEPRECATION")
 @Composable
@@ -74,7 +100,7 @@ fun MapLibreViewComponent(
         }
     }
 
-    // Cargar mapa y renderizar escenas realistas
+    // Cargar mapa con estilo ráster JSON de OpenStreetMap directo
     AndroidView(
         factory = { mapView },
         modifier = modifier
@@ -82,7 +108,7 @@ fun MapLibreViewComponent(
         if (maplibreMap == null) {
             mapView.getMapAsync { map ->
                 maplibreMap = map
-                map.setStyle(Style.Builder().fromUri(MAP_STYLE_URL)) { _ ->
+                map.setStyle(Style.Builder().fromJson(OSM_STYLE_JSON)) { _ ->
                     // Posición inicial centrada en Arequipa
                     val initialPosition = CameraPosition.Builder()
                         .target(LatLng(AREQUIPA_LAT, AREQUIPA_LNG))
@@ -93,20 +119,19 @@ fun MapLibreViewComponent(
                     map.clear()
                     principalMarkerMap.clear()
 
-                    // Renderizar cada escena con sus elementos vectoriales combinar
+                    // Renderizar cada escena con sus elementos vectoriales combinados
                     alertas.forEach { alerta ->
                         alerta.elementosEscena.forEach { elemento ->
                             val bitmap = drawableToBitmap(
                                 context = context,
                                 drawableId = elemento.drawableRes,
-                                sizeDp = if (elemento.esPrincipal) 44 else 32
+                                sizeDp = if (elemento.esPrincipal) 48 else 36
                             )
                             val icon = IconFactory.getInstance(context).fromBitmap(bitmap)
 
                             val markerOptions = MarkerOptions()
                                 .position(LatLng(elemento.latitud, elemento.longitud))
-                                .title("${alerta.tipo.tituloTipo}: ${alerta.titulo}")
-                                .snippet(alerta.descripcion)
+                                .title(elemento.titulo)
                                 .icon(icon)
 
                             val marker = map.addMarker(markerOptions)
@@ -127,33 +152,39 @@ fun MapLibreViewComponent(
                         matchedAlert?.let {
                             onAlertaSelected(it)
                         }
-                        false
+                        true
                     }
                 }
             }
         }
     }
 
-    // Animación de cámara al seleccionar una alerta (Zoom 16.5)
+    // Animación de cámara al seleccionar una alerta (Zoom 16.5) o recentrar
     LaunchedEffect(selectedAlerta, maplibreMap) {
         val map = maplibreMap ?: return@LaunchedEffect
-        val alerta = selectedAlerta ?: return@LaunchedEffect
 
-        val targetPosition = LatLng(alerta.latitud, alerta.longitud)
-        val cameraUpdate = CameraUpdateFactory.newCameraPosition(
-            CameraPosition.Builder()
-                .target(targetPosition)
-                .zoom(ALERT_ZOOM)
-                .bearing(15.0)
-                .tilt(30.0)
-                .build()
-        )
+        if (selectedAlerta == null) {
+            val resetUpdate = CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(LatLng(AREQUIPA_LAT, AREQUIPA_LNG))
+                    .zoom(DEFAULT_ZOOM)
+                    .bearing(0.0)
+                    .tilt(0.0)
+                    .build()
+            )
+            map.animateCamera(resetUpdate, 1200)
+        } else {
+            val targetPosition = LatLng(selectedAlerta.latitud, selectedAlerta.longitud)
+            val cameraUpdate = CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(targetPosition)
+                    .zoom(ALERT_ZOOM)
+                    .bearing(15.0)
+                    .tilt(25.0)
+                    .build()
+            )
 
-        map.animateCamera(cameraUpdate, 1500)
-
-        // Resaltar marcador principal de la escena
-        principalMarkerMap[alerta.id]?.let { marker ->
-            map.selectMarker(marker)
+            map.animateCamera(cameraUpdate, 1500)
         }
     }
 }

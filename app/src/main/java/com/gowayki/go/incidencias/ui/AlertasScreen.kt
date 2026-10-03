@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,12 +13,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,14 +38,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,8 +50,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,74 +61,27 @@ import com.gowayki.go.incidencias.model.AlertasRepository
 import com.gowayki.go.incidencias.model.AlertaVial
 import com.gowayki.go.incidencias.model.TipoAlerta
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Paleta de Colores de Marca Gowayki
+private val GowaykiOrange = Color(0xFFE85D04)
+private val GowaykiGlassSlate = Color(0xCC1E2229)
+private val GowaykiOrangeSubtleBorder = Color(0x40E85D04)
+private val GowaykiTextPrimary = Color(0xFFFFFFFF)
+private val GowaykiTextSecondary = Color(0xFFA0AAB8)
+
 @Composable
 fun AlertasScreen() {
     val alertas = remember { AlertasRepository.alertasArequipa }
     var selectedAlerta by remember { mutableStateOf<AlertaVial?>(null) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFF0284C7),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = "Gowayki Logo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Gowayki GO",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Monitor Vial Arequipa • 5 Escenarios",
-                                fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    if (selectedAlerta != null) {
-                        Button(
-                            onClick = { selectedAlerta = null },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF334155)
-                            ),
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text("Recentrar Arequipa", fontSize = 11.sp, color = Color.White)
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0F172A)
-                )
-            )
-        }
+        containerColor = Color(0xFF1E2229)
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Mapa de MapLibre como vista principal
+            // 1. Mapa MapLibre con teselas OpenStreetMap como fondo completo
             MapLibreViewComponent(
                 alertas = alertas,
                 selectedAlerta = selectedAlerta,
@@ -138,15 +91,26 @@ fun AlertasScreen() {
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Feature Discovery / Banner Guía para el conductor
+            // 2. Header Superior Integrado (Píldora flotante compacta de 48.dp de alto, esquinas 16.dp, translúcido 0xDD1E2229)
+            CompactGowaykiHeader(
+                selectedAlerta = selectedAlerta,
+                onReset = { selectedAlerta = null },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .fillMaxWidth(0.90f)
+                    .padding(top = 8.dp)
+            )
+
+            // 3. Cuadro Informativo Blanco (Callout) al 80% de ancho y 10dp de padding interno
             AnimatedVisibility(
                 visible = selectedAlerta != null,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
                 exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(16.dp)
+                    .statusBarsPadding()
+                    .padding(top = 66.dp)
             ) {
                 selectedAlerta?.let { alerta ->
                     FeatureDiscoveryBanner(
@@ -156,49 +120,90 @@ fun AlertasScreen() {
                 }
             }
 
-            // Panel flotante inferior con la lista de 5 alertas
-            Column(
+            // 4. Lista Inferior Flotante (LazyRow flotando directamente sobre el mapa, con Safe Insets para botones Android)
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color(0xFF0F172A).copy(alpha = 0.94f))
-                    .padding(vertical = 12.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 26.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Incidencias activas en Arequipa",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Selecciona para ver el escenario",
-                        color = Color(0xFF38BDF8),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                items(alertas, key = { it.id }) { alerta ->
+                    CompactAlertaCard(
+                        alerta = alerta,
+                        isSelected = alerta.id == selectedAlerta?.id,
+                        onSelect = { selectedAlerta = alerta }
                     )
                 }
+            }
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Lista horizontal de tarjetas
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+@Composable
+fun CompactGowaykiHeader(
+    selectedAlerta: AlertaVial?,
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = Color(0xDD1E2229),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, GowaykiOrangeSubtleBorder),
+        shadowElevation = 6.dp,
+        modifier = modifier
+            .height(48.dp)
+            .graphicsLayer { alpha = 0.95f }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = GowaykiOrange,
+                    modifier = Modifier.size(26.dp)
                 ) {
-                    items(alertas, key = { it.id }) { alerta ->
-                        AlertaCard(
-                            alerta = alerta,
-                            isSelected = alerta.id == selectedAlerta?.id,
-                            onSelect = { selectedAlerta = alerta }
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Gowayki Logo",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
                         )
                     }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Gowayki GO",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = GowaykiTextPrimary
+                    )
+                    Text(
+                        text = "Monitor Vial Arequipa",
+                        fontSize = 9.sp,
+                        color = GowaykiTextSecondary
+                    )
+                }
+            }
+
+            if (selectedAlerta != null) {
+                Button(
+                    onClick = onReset,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GowaykiOrange
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    Text("Recentrar", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -213,14 +218,14 @@ fun FeatureDiscoveryBanner(
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1E293B).copy(alpha = 0.96f)
+            containerColor = Color.White
         ),
-        border = BorderStroke(1.5.dp, alerta.tipo.severidad.color),
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
-        modifier = Modifier.fillMaxWidth()
+        border = BorderStroke(1.dp, alerta.tipo.severidad.color.copy(alpha = 0.4f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        modifier = Modifier.fillMaxWidth(0.80f)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(10.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -235,16 +240,16 @@ fun FeatureDiscoveryBanner(
                         Text(
                             text = alerta.tipo.severidad.nombre.uppercase(),
                             color = Color.White,
-                            fontSize = 10.sp,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = alerta.ubicacion,
-                        color = Color(0xFFE2E8F0),
-                        fontSize = 13.sp,
+                        color = Color(0xFF64748B),
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -252,81 +257,84 @@ fun FeatureDiscoveryBanner(
                 }
                 IconButton(
                     onClick = onClose,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Cerrar Guía",
-                        tint = Color(0xFF94A3B8)
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(12.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = alerta.titulo,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = alerta.descripcion,
-                color = Color(0xFFCBD5E1),
-                fontSize = 13.sp
+                text = alerta.titulo,
+                color = Color(0xFF0F172A),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = alerta.descripcion,
+                color = Color(0xFF475569),
+                fontSize = 11.sp
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Surface(
-                    color = Color(0xFF0F172A),
-                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFFEF2F2),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(0.5.dp, GowaykiOrange.copy(alpha = 0.3f)),
                     modifier = Modifier.weight(1f)
                 ) {
                     Row(
-                        modifier = Modifier.padding(8.dp),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            tint = alerta.tipo.severidad.color,
-                            modifier = Modifier.size(16.dp)
+                            tint = GowaykiOrange,
+                            modifier = Modifier.size(12.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Column {
-                            Text("Retraso Estimado", fontSize = 9.sp, color = Color(0xFF94A3B8))
-                            Text(alerta.retrasoEstimado, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Retraso", fontSize = 8.sp, color = Color(0xFF64748B))
+                            Text(alerta.retrasoEstimado, fontSize = 10.sp, color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
                 Surface(
-                    color = Color(0xFF0F172A),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1.5f)
+                    color = Color(0xFFF0F9FF),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(0.5.dp, Color(0xFF0284C7).copy(alpha = 0.3f)),
+                    modifier = Modifier.weight(1.3f)
                 ) {
                     Row(
-                        modifier = Modifier.padding(8.dp),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Place,
                             contentDescription = null,
-                            tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(16.dp)
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(12.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Column {
-                            Text("Sugerencia de Ruta", fontSize = 9.sp, color = Color(0xFF94A3B8))
-                            Text(alerta.accionSugerida, fontSize = 11.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Acción", fontSize = 8.sp, color = Color(0xFF64748B))
+                            Text(alerta.accionSugerida, fontSize = 9.sp, color = Color(0xFF0F172A), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -336,124 +344,93 @@ fun FeatureDiscoveryBanner(
 }
 
 @Composable
-fun AlertaCard(
+fun CompactAlertaCard(
     alerta: AlertaVial,
     isSelected: Boolean,
     onSelect: () -> Unit
 ) {
     val severidadColor = alerta.tipo.severidad.color
-    val borderColor = if (isSelected) severidadColor else Color(0xFF334155)
-    val cardBgColor = if (isSelected) Color(0xFF1E293B) else Color(0xFF0F172A).copy(alpha = 0.9f)
+    val borderColor = if (isSelected) GowaykiOrange else GowaykiOrangeSubtleBorder
+    val cardBgColor = GowaykiGlassSlate
 
     Card(
         modifier = Modifier
-            .width(260.dp)
-            .clickable { onSelect() },
-        shape = RoundedCornerShape(16.dp),
+            .width(185.dp)
+            .height(80.dp)
+            .clickable { onSelect() }
+            .graphicsLayer { alpha = 0.95f },
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardBgColor),
-        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 8.dp else 2.dp)
+        border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 6.dp else 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header de la tarjeta con Badge de Severidad e Ícono diferenciador (QA Rule)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Surface(
-                    color = severidadColor.copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(severidadColor)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = alerta.tipo.severidad.nombre.uppercase(),
-                            color = severidadColor,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                // Ícono UI diferenciador para cumplir la regla de QA (no idéntico al marcador del mapa)
-                Surface(
-                    color = Color(0xFF1E293B),
+                    color = severidadColor.copy(alpha = 0.2f),
                     shape = CircleShape,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(22.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = getIconoDiferenciado(alerta.tipo),
                             contentDescription = alerta.tipo.tituloTipo,
                             tint = severidadColor,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                     }
                 }
+                Spacer(modifier = Modifier.width(6.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = alerta.titulo,
+                        color = GowaykiTextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = alerta.ubicacion,
+                        color = GowaykiTextSecondary,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = alerta.titulo,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = alerta.ubicacion,
-                color = Color(0xFF38BDF8),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = alerta.descripcion,
-                color = Color(0xFFCBD5E1),
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                Surface(
+                    color = severidadColor,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = alerta.tipo.severidad.nombre.uppercase(),
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                    )
+                }
+
                 Text(
                     text = "Retraso: ${alerta.retrasoEstimado}",
-                    color = Color(0xFFF1F5F9),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (isSelected) "● Ver en mapa" else "Tocar para zoom",
-                    color = if (isSelected) severidadColor else Color(0xFF64748B),
+                    color = if (isSelected) GowaykiOrange else GowaykiTextPrimary,
                     fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
